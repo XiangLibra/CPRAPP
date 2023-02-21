@@ -3,7 +3,7 @@
     <string name="tfe_pe_app_name">CPRAPP</string>
     <string name="tfe_pe_request_permission">This app needs camera permission.</string>
     <string name="tfe_pe_tv_score">分數: %.2f</string>
-    <string name="tfe_pe_tv_model">模型: MoveNet Thunder</string>
+    <string name="tfe_pe_tv_model">模型: </string>
     <string name="tfe_pe_tv_fps">Fps: %d</string>
     <string name="tfe_pe_tv_debug">類別: %s</string>
     <string name="tfe_pe_tv_device">裝置: </string>
@@ -18,5 +18,10 @@
     <string-array name="tfe_pe_camera_name">
         <item>後鏡頭</item>
         <item>前鏡頭</item>
+    </string-array>
+    <string-array name="tfe_pe_model_name">
+        <item>Movenet 標準版</item>
+        <item>Movenet 輕量版</item>
+
     </string-array>
 </resources>

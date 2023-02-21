@@ -16,10 +16,7 @@ limitations under the License.
 
 package lyi.linyi.posemon
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.*
 import lyi.linyi.posemon.data.BodyPart
 import lyi.linyi.posemon.data.Person
 import kotlin.math.max
@@ -36,6 +33,16 @@ object VisualizationUtils {
 
     /** Distance from person id to the nose keypoint.  */
     private const val PERSON_ID_MARGIN = 6f
+
+    var pointA= PointF(3.5f, 2.0f)
+    var pointB=PointF(3.5f, 2.0f)
+    var leftpointAA=PointF(3.5f, 2.0f)
+    var leftpointBB=PointF(3.5f, 2.0f)
+    var leftpointCC=PointF(3.5f, 2.0f)
+    var rightpointAA=PointF(3.5f, 2.0f)
+    var rightpointBB=PointF(3.5f, 2.0f)
+    var rightpointCC=PointF(3.5f, 2.0f)
+
 
     /** Pair of keypoints to draw lines between.  */
     private val bodyJoints = listOf(//控制連接的線
@@ -73,6 +80,8 @@ object VisualizationUtils {
 //        BodyPart.LEFT_ANKLE
 
     )
+    private val bodyLeft = Triple(BodyPart.LEFT_SHOULDER, BodyPart.LEFT_ELBOW,BodyPart.LEFT_WRIST)
+    private val bodyRight = Triple(BodyPart.RIGHT_SHOULDER, BodyPart.RIGHT_ELBOW,BodyPart.RIGHT_WRIST)
 
     // Draw line and point indicate body pose
     fun drawBodyKeypoints(
@@ -116,8 +125,9 @@ object VisualizationUtils {
                 }
             }
             bodyJoints.forEach {
-                val pointA = person.keyPoints[it.first.position].coordinate
-                val pointB = person.keyPoints[it.second.position].coordinate
+                pointA = person.keyPoints[it.first.position].coordinate
+                pointB = person.keyPoints[it.second.position].coordinate
+                val pointAB=Math.sqrt(Math.pow((pointA.x-pointB.x).toDouble(),2.0)+Math.pow((pointA.y-pointB.y).toDouble(),2.0))
                 originalSizeCanvas.drawLine(pointA.x, pointA.y, pointB.x, pointB.y, paintLine)
             }
             bodypoint.forEach{
@@ -127,6 +137,16 @@ object VisualizationUtils {
                     CIRCLE_RADIUS,
                     paintCircle)
             }
+
+            leftpointAA= person.keyPoints[bodyLeft.first.position].coordinate
+            leftpointBB= person.keyPoints[bodyLeft.second.position].coordinate
+            leftpointCC= person.keyPoints[bodyLeft.third.position].coordinate
+            rightpointAA= person.keyPoints[bodyRight.first.position].coordinate
+            rightpointBB= person.keyPoints[bodyRight.second.position].coordinate
+            rightpointCC= person.keyPoints[bodyRight.third.position].coordinate
+
+
+
 
 //            person.keyPoints.forEach { point ->
 //                originalSizeCanvas.drawCircle(
@@ -138,5 +158,75 @@ object VisualizationUtils {
 //            }
         }
         return output
+    }
+    fun bodys(
+        input: Bitmap,
+        persons: List<Person>,
+        isTrackerEnabled: Boolean = false
+    ):  Triple<PointF, PointF, PointF> {
+        val paintCircle = Paint().apply {
+            strokeWidth = CIRCLE_RADIUS
+            color = Color.RED
+            style = Paint.Style.FILL
+        }
+        val paintLine = Paint().apply {
+            strokeWidth = LINE_WIDTH
+            color = Color.RED
+            style = Paint.Style.STROKE
+        }
+
+        val paintText = Paint().apply {
+            textSize = PERSON_ID_TEXT_SIZE
+            color = Color.BLUE
+            textAlign = Paint.Align.LEFT
+        }
+
+        val output = input.copy(Bitmap.Config.ARGB_8888, true)
+        val originalSizeCanvas = Canvas(output)
+        persons.forEach { person ->
+            // draw person id if tracker is enable
+            if (isTrackerEnabled) {
+                person.boundingBox?.let {
+                    val personIdX = max(0f, it.left)
+                    val personIdY = max(0f, it.top)
+
+                    originalSizeCanvas.drawText(
+                        person.id.toString(),
+                        personIdX,
+                        personIdY - PERSON_ID_MARGIN,
+                        paintText
+                    )
+                    originalSizeCanvas.drawRect(it, paintLine)
+                }
+            }
+            bodyJoints.forEach {
+                pointA = person.keyPoints[it.first.position].coordinate
+                pointB = person.keyPoints[it.second.position].coordinate
+                val pointAB=Math.sqrt(Math.pow((pointA.x-pointB.x).toDouble(),2.0)+Math.pow((pointA.y-pointB.y).toDouble(),2.0))
+                originalSizeCanvas.drawLine(pointA.x, pointA.y, pointB.x, pointB.y, paintLine)
+            }
+            bodypoint.forEach{
+                originalSizeCanvas.drawCircle(
+                    person.keyPoints[it.position].coordinate.x,
+                    person.keyPoints[it.position].coordinate.y,
+                    CIRCLE_RADIUS,
+                    paintCircle)
+            }
+
+
+
+
+
+//            person.keyPoints.forEach { point ->
+//                originalSizeCanvas.drawCircle(
+//                    point.coordinate.x,
+//                    point.coordinate.y,
+//                    CIRCLE_RADIUS,
+//                    paintCircle
+//                )
+//            }
+        }
+        var pointout=Triple(leftpointAA,leftpointBB,leftpointCC)
+        return pointout
     }
 }

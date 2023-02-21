@@ -39,15 +39,18 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import lyi.linyi.posemon.camera.CameraSource
-import lyi.linyi.posemon.data.Device
 import lyi.linyi.posemon.data.Camera
+import lyi.linyi.posemon.data.Device
 import lyi.linyi.posemon.ml.ModelType
 import lyi.linyi.posemon.ml.MoveNet
-import lyi.linyi.posemon.ml.PoseClassifier
+//import lyi.linyi.posemon.ml.PoseClassifier
+import java.sql.Types.NULL
+
 
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val FRAGMENT_DIALOG = "dialog"
+
     }
 
     /** 为视频画面创建一个 SurfaceView */
@@ -57,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private var device = Device.CPU
     /** 修改默认摄像头：FRONT、BACK */
     private var selectedCamera = Camera.BACK
+
+    private  var model=ModelType.Thunder
 
     /** 定义几个计数器 */
     private var forwardheadCounter = 0
@@ -85,9 +90,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvScore: TextView
     private lateinit var spnDevice: Spinner
     private lateinit var spnCamera: Spinner
+    private lateinit var tvModelType: TextView
+    private lateinit var spnModel: Spinner
 
     private var cameraSource: CameraSource? = null
     private var isClassifyPose = true
+
 
     private val requestPermissionLauncher =
         registerForActivityResult(
@@ -123,6 +131,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var changeModelListener = object : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(p0: AdapterView<*>?, view: View?, direction: Int, id: Long) {
+            changeModel(direction)
+        }
+
+        override fun onNothingSelected(p0: AdapterView<*>?) {
+            /**如果使用用戶未選擇攝像頭，使用默認模型來預測 */
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -141,6 +159,9 @@ class MainActivity : AppCompatActivity() {
         spnDevice = findViewById(R.id.spnDevice)
         spnCamera = findViewById(R.id.spnCamera)
         surfaceView = findViewById(R.id.surfaceView)
+//        tvModelType=findViewById(R.id.tvModel)
+        spnModel=findViewById(R.id.spnModel)
+
         initSpinner()
         if (!isCameraPermissionGranted()) {
             requestPermission()
@@ -192,6 +213,104 @@ class MainActivity : AppCompatActivity() {
         var KIM3PlayerFlag = true
         var KIM4PlayerFlag = true
 
+        fun leftKeypoints(
+//            persons: List<Person>,
+//            l: Triple<BodyPart, BodyPart, BodyPart>
+        ): Float? {
+
+
+//            persons.forEach { person ->
+//                val pointA = person.keyPoints[l.first.position].coordinate
+//                val pointB = person.keyPoints[l.second.position].coordinate
+//                val pointC = person.keyPoints[l.third.position].coordinate
+
+                val pointA=VisualizationUtils.leftpointAA
+                val pointB=VisualizationUtils.leftpointBB
+                val pointC=VisualizationUtils.leftpointCC
+
+                val pointAB = Math.sqrt(
+                    Math.pow((pointA.x - pointB.x).toDouble(), 2.0) + Math.pow((pointA.y - pointB.y).toDouble(), 2.0)
+                )
+                val pointBC = Math.sqrt(
+                    Math.pow((pointB.x - pointC.x).toDouble(), 2.0) + Math.pow((pointB.y - pointC.y).toDouble(), 2.0)
+                )
+                var pointAC = Math.sqrt(
+                    Math.pow((pointA.x - pointC.x).toDouble(), 2.0) + Math.pow((pointA.y - pointC.y).toDouble(), 2.0)
+                )
+
+            if((pointAB+pointBC)<pointAC||(pointBC+pointAC)<pointAB|| (pointAB+pointAC)<pointBC
+                || Math.abs(pointAB-pointBC)>pointAC ||Math.abs(pointBC-pointAC)>pointAB ||Math.abs(pointAB-pointAC)>pointBC) {
+                return NULL.toFloat()
+            }
+            else{
+                val angle = Math.toDegrees(
+                    Math.acos(
+                        ((Math.pow(pointBC, 2.0) + Math.pow(pointAB, 2.0) - Math.pow(pointAC, 2.0)) / (2 * pointBC * pointAB))
+                    )
+                ).toFloat()
+//            }
+                return angle}
+        }
+
+        fun rightKeypoints(
+//            persons: List<Person>,
+//            l: Triple<BodyPart, BodyPart, BodyPart>
+        ): Float? {
+
+
+//            persons.forEach { person ->
+//                val pointA = person.keyPoints[l.first.position].coordinate
+//                val pointB = person.keyPoints[l.second.position].coordinate
+//                val pointC = person.keyPoints[l.third.position].coordinate
+
+            val pointA=VisualizationUtils.rightpointAA
+            val pointB=VisualizationUtils.rightpointBB
+            val pointC=VisualizationUtils.rightpointCC
+
+            val pointAB = Math.sqrt(
+                Math.pow((pointA.x - pointB.x).toDouble(), 2.0) + Math.pow((pointA.y - pointB.y).toDouble(), 2.0)
+            )
+            val pointBC = Math.sqrt(
+                Math.pow((pointB.x - pointC.x).toDouble(), 2.0) + Math.pow((pointB.y - pointC.y).toDouble(), 2.0)
+            )
+            val pointAC = Math.sqrt(
+                Math.pow((pointA.x - pointC.x).toDouble(), 2.0) + Math.pow((pointA.y - pointC.y).toDouble(), 2.0)
+            )
+
+            if((pointAB+pointBC)<pointAC||(pointBC+pointAC)<pointAB|| (pointAB+pointAC)<pointBC
+                || Math.abs(pointAB-pointBC)>pointAC ||Math.abs(pointBC-pointAC)>pointAB ||Math.abs(pointAB-pointAC)>pointBC) {
+                return NULL.toFloat()
+            }
+            else{
+            val angle = Math.toDegrees(
+                Math.acos(
+                    ((Math.pow(pointBC, 2.0) + Math.pow(pointAB, 2.0) - Math.pow(pointAC, 2.0)) / (2 * pointBC * pointAB))
+                )
+            ).toFloat()
+//            }
+            return angle}
+        }
+
+
+
+
+
+
+
+//        val outputBitmap = VisualizationUtils.drawBodyKeypoints(
+//
+//            persons.filter { it.score > CameraSource.MIN_CONFIDENCE }, isTrackerEnabled
+//        )
+
+
+//                Triple(BodyPart.RIGHT_SHOULDER, BodyPart.RIGHT_ELBOW,BodyPart.RIGHT_WRIST),
+
+
+
+
+
+
+
 
         if (isCameraPermissionGranted()) {
             if (cameraSource == null) {
@@ -205,16 +324,242 @@ class MainActivity : AppCompatActivity() {
 
                         /**對檢測結果進行處理*/
                         override fun onDetectedInfo(
-                            personScore: Float?,
-                            poseLabels: List<Pair<String, Float>>?
+                            personScore: Float?
+//                            poseLabels: List<Pair<String, Float>>?
                         ) {
+
+
                             tvScore.text = getString(R.string.tfe_pe_tv_score, personScore ?: 0f)
 
                             /** 分析目標姿態，給出提示*/
-                            if (poseLabels != null && personScore != null && personScore > 0.3) {
+                            if (personScore != null && personScore > 0.3) {
+//                                val persons = mutableListOf<Person>()
+
+
+//                                val bodyJoints = Triple(BodyPart.LEFT_SHOULDER, BodyPart.LEFT_ELBOW,BodyPart.LEFT_WRIST)
+//                                val bodyJoints2 = Triple(BodyPart.RIGHT_SHOULDER, BodyPart.RIGHT_ELBOW,BodyPart.RIGHT_WRIST)
+                                val angleLeft = leftKeypoints(
+//                                    persons
+                                )
+                                val angleRight= rightKeypoints(
+//                                    persons
+                                )
                                 missingCounter = 0
-                                val sortedLabels = poseLabels.sortedByDescending { it.second }
-                                when (sortedLabels[0].first) {
+//                                val sortedLabels = poseLabels.sortedByDescending { it.second }
+
+//                                while (personScore>0.3) {
+                                if((angleLeft ?: 0f >= 165) && (angleRight ?: 0f >= 165)) {
+//                                        crosslegCounter = 0
+//                                        standardCounter = 0
+
+
+//                                    if (poseRegister == "雙手大於165度") {
+
+                                    TGreater165Counter ++
+//                                    }
+
+                                    poseRegister = "雙手大於165度"
+
+                                    /** 顯示當前坐姿狀態：脖子前伸 */
+                                    if (TGreater165Counter  > 50) {
+
+                                        /** 播放提示音 */
+                                        if (armvoicePlayerFlag) {
+                                            armvoicePlayer.start()
+                                        }
+                                        armvoicePlayerFlag=false
+
+
+//                                            standardPlayerFlag = true
+//                                            crosslegPlayerFlag = true
+//                                            forwardheadPlayerFlag = true
+//                                            KIM1PlayerFlag=true
+//                                            KIM2PlayerFlag=true
+//                                            KIM3PlayerFlag=false
+//                                            KIM4PlayerFlag=true
+
+                                        ivStatus.setImageResource(R.drawable.tgreater165)
+                                    } else if (TGreater165Counter  > 10) {
+                                        TGreater165Counter ++
+                                        L165Counter  = 0
+                                        R165Counter = 0
+
+                                        TLess165Counter = 0
+                                        ivStatus.setImageResource(R.drawable.tgreater165)
+                                        armvoicePlayerFlag=true
+                                    }
+
+                                    /** 顯示 Debug 信息 */
+                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${"雙手大於165度"} $TLess165Counter ")
+//                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $TGreater165Counter")
+                                }
+                                else if ((angleLeft ?: 0f < 165) && (angleRight ?: 0f < 165)){
+//                                        crosslegCounter = 0
+//                                        standardCounter = 0
+
+
+
+
+                                    TLess165Counter++
+
+                                    poseRegister = "雙手小於165度"
+
+                                    /** 顯示當前坐姿狀態：脖子前伸 */
+                                    if (TLess165Counter > 50) {
+
+                                        /** 播放提示音 */
+                                        if (armvoicePlayerFlag) {
+                                            armvoicePlayer.start()
+                                        }
+                                        armvoicePlayerFlag=false
+
+//                                            standardPlayerFlag = true
+//                                            crosslegPlayerFlag = true
+//                                            forwardheadPlayerFlag = true
+//                                            KIM1PlayerFlag=true
+//                                            KIM2PlayerFlag=true
+//                                            KIM3PlayerFlag=true
+//                                            KIM4PlayerFlag=false
+
+                                        ivStatus.setImageResource(R.drawable.tless165)
+                                    } else if (TLess165Counter > 10) {
+                                        TLess165Counter++
+                                        L165Counter  = 0
+                                        R165Counter = 0
+                                        TGreater165Counter = 0
+                                        ivStatus.setImageResource(R.drawable.tless165)
+                                        armvoicePlayerFlag=true
+                                    }
+
+                                    /** 顯示 Debug 信息 */
+                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${"雙手小於165度"} $TLess165Counter ")
+//                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $TLess165Counter")
+                                }
+
+                                else if((angleLeft ?: 0f < 165 && angleRight ?:0f >=165)) {
+//                                        crosslegCounter = 0
+//                                        standardCounter = 0
+
+
+
+
+//                                    if (poseRegister == "左手小於165度") {
+
+                                        L165Counter++
+//                                    }
+                                    poseRegister = "左手小於165度"
+
+                                    /** 显示当前坐姿状态：脖子前伸 */
+                                    if (L165Counter > 50) {
+
+                                        /** 播放提示音 */
+                                        if (armvoicePlayerFlag) {
+                                            armvoicePlayer.start()
+                                        }
+
+                                        armvoicePlayerFlag=false
+//                                            standardPlayerFlag = true
+//                                            crosslegPlayerFlag = true
+//                                            forwardheadPlayerFlag = true
+//                                            KIM1PlayerFlag=false
+//                                            KIM2PlayerFlag=true
+//                                            KIM3PlayerFlag=true
+//                                            KIM4PlayerFlag=true
+
+                                        ivStatus.setImageResource(R.drawable.l165)
+                                    } else if (L165Counter > 10) {
+                                        L165Counter++
+                                        R165Counter  = 0
+                                        TGreater165Counter = 0
+                                        TLess165Counter = 0
+                                        ivStatus.setImageResource(R.drawable.l165)
+                                        armvoicePlayerFlag=true
+                                    }
+
+                                    /** 顯示 Debug 信息 */
+                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${"左手小於165度"} $L165Counter ")
+//                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $L165Counter")
+                                }
+                                else if((angleLeft ?: 0f >= 165)&&(angleRight ?: 0f < 165)) {
+//                                        crosslegCounter = 0
+//                                        standardCounter = 0
+
+                                        R165Counter++
+
+                                    poseRegister = "右手小於165度"
+
+                                    /** 顯示當前坐姿狀態：脖子前伸 */
+                                    if (R165Counter > 50) {
+
+                                        /** 播放提示音 */
+                                        if (armvoicePlayerFlag) {
+                                            armvoicePlayer.start()
+                                        }
+
+                                        armvoicePlayerFlag=false
+//                                            standardPlayerFlag = true
+//                                            crosslegPlayerFlag = true
+//                                            forwardheadPlayerFlag = true
+//                                            KIM1PlayerFlag=true
+//                                            KIM2PlayerFlag=false
+//                                            KIM3PlayerFlag=true
+//                                            KIM4PlayerFlag=true
+
+                                        ivStatus.setImageResource(R.drawable.r165)
+                                    } else if (R165Counter > 10) {
+                                        L165Counter  = 0
+                                        R165Counter
+                                        TGreater165Counter = 0
+                                        TLess165Counter = 0
+                                        ivStatus.setImageResource(R.drawable.r165)
+                                        armvoicePlayerFlag=true
+                                    }
+
+                                    /** 顯示 Debug 信息 */
+                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${"右手小於165度"} $R165Counter ")
+//                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $R165Counter")
+                                }
+
+                                else if((angleLeft== NULL.toFloat())||(angleRight == NULL.toFloat())) {
+                                    ivStatus.setImageResource(R.drawable.no_target)
+                                    tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${"未偵測到人"} $standardCounter")
+                                }
+
+//                                    else  {
+//                                        forwardheadCounter = 0
+//                                        crosslegCounter = 0
+//                                        L165Counter  = 0
+//                                        R165Counter  = 0
+//                                        TGreater165Counter = 0
+//                                        TLess165Counter = 0
+//                                        if (poseRegister == "standard") {
+//                                            standardCounter++
+//                                        }
+//                                        poseRegister = "standard"
+//                                        ivStatus.setImageResource(R.drawable.no_target)
+//                                        /** 顯示當前坐姿狀態：标准 */
+//                                        if (standardCounter > 20) {
+//
+//                                            /** 播放提示音：坐姿标准 */
+////                                            if (standardPlayerFlag) {
+////                                                standardPlayer.start()
+////                                            }
+////                                            standardPlayerFlag = false
+////                                            crosslegPlayerFlag = true
+////                                            forwardheadPlayerFlag = true
+////                                            KIM1PlayerFlag=true
+////                                            KIM2PlayerFlag=true
+////                                            KIM3PlayerFlag=true
+////                                            KIM4PlayerFlag=true
+//
+//                                            // ivStatus.setImageResource(R.drawable.standard)
+//                                        }
+//
+//                                        /** 顯示 Debug 信息 */
+//                                        tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $standardCounter")
+//                                    }
+//                                }
+//                                when (sortedLabels[0].first) {
 //                                    "forwardhead" -> {
 //                                        crosslegCounter = 0
 //                                        standardCounter = 0
@@ -269,14 +614,9 @@ class MainActivity : AppCompatActivity() {
 //                                            crosslegPlayerFlag = false
 //                                            forwardheadPlayerFlag = true
 //                                            ivStatus.setImageResource(R.drawable.crossleg_confirm)
-//                                        } else if (crosslegCounter > 10) {
-//                                            ivStatus.setImageResource(R.drawable.crossleg_suspect)
-//                                        }
-//
-//                                        /** 显示 Debug 信息 */
-//                                        tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $crosslegCounter")
-//                                    }
-                                    "左手小於165度" -> {
+
+
+                                  /*  "左手小於165度" -> {
 //                                        crosslegCounter = 0
 //                                        standardCounter = 0
 
@@ -438,41 +778,9 @@ class MainActivity : AppCompatActivity() {
 
                                         /** 顯示 Debug 信息 */
                                         tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $TLess165Counter")
-                                    }
-                                    else -> {
-                                        forwardheadCounter = 0
-                                        crosslegCounter = 0
-                                        L165Counter  = 0
-                                        R165Counter  = 0
-                                        TGreater165Counter = 0
-                                        TLess165Counter = 0
-                                        if (poseRegister == "standard") {
-                                            standardCounter++
-                                        }
-                                        poseRegister = "standard"
-                                        ivStatus.setImageResource(R.drawable.no_target)
-                                        /** 顯示當前坐姿狀態：标准 */
-                                        if (standardCounter > 20) {
+                                    }*/
 
-                                            /** 播放提示音：坐姿标准 */
-//                                            if (standardPlayerFlag) {
-//                                                standardPlayer.start()
-//                                            }
-//                                            standardPlayerFlag = false
-//                                            crosslegPlayerFlag = true
-//                                            forwardheadPlayerFlag = true
-//                                            KIM1PlayerFlag=true
-//                                            KIM2PlayerFlag=true
-//                                            KIM3PlayerFlag=true
-//                                            KIM4PlayerFlag=true
-
-                                           // ivStatus.setImageResource(R.drawable.standard)
-                                        }
-
-                                        /** 顯示 Debug 信息 */
-                                        tvDebug.text = getString(R.string.tfe_pe_tv_debug, "${sortedLabels[0].first} $standardCounter")
-                                    }
-                                }
+//                                }
 
 
                             }
@@ -489,7 +797,7 @@ class MainActivity : AppCompatActivity() {
                     }).apply {
                         prepareCamera()
                     }
-                isPoseClassifier()
+//                isPoseClassifier()
                 lifecycleScope.launch(Dispatchers.Main) {
                     cameraSource?.initCamera()
                 }
@@ -498,9 +806,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun isPoseClassifier() {
-        cameraSource?.setClassifier(if (isClassifyPose) PoseClassifier.create(this) else null)
-    }
+//    private fun isPoseClassifier() {
+//        cameraSource?.setClassifier(if (isClassifyPose) PoseClassifier.create(this) else null)
+//    }
 
     /** 初始化運算設備選項菜單（CPU、GPU、NNAPI） */
     private fun initSpinner() {
@@ -523,6 +831,16 @@ class MainActivity : AppCompatActivity() {
             spnCamera.adapter = adapter
             spnCamera.onItemSelectedListener = changeCameraListener
         }
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.tfe_pe_model_name, android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+            spnModel.adapter = adapter
+            spnModel.onItemSelectedListener = changeModelListener
+        }
+
     }
 
     /** 在程序運行過程中切換運行計算設備*/
@@ -551,8 +869,25 @@ class MainActivity : AppCompatActivity() {
         openCamera()
     }
 
+    private fun changeModel(direaction: Int) {
+        val targetModel = when (direaction) {
+            0 -> ModelType.Thunder
+            else -> ModelType.Lightning
+        }
+        if (model == targetModel) return
+        model = targetModel
+
+//        cameraSource?.close()
+//        cameraSource = null
+        createPoseEstimator()
+    }
+
+
     private fun createPoseEstimator() {
-        val poseDetector = MoveNet.create(this, device, ModelType.Thunder)
+//        val model=ModelType.Lightning
+        val poseDetector = MoveNet.create(this, device, model)
+//       tvDebug.text = getString(R.string.tfe_pe_tv_debug, "未偵測到人 $missingCounter")
+//        tvModelType.text=getString(R.string.tfe_pe_tv_model, "Movenet  $model")
         poseDetector.let { detector ->
             cameraSource?.setDetector(detector)
         }

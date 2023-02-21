@@ -18,10 +18,7 @@ package lyi.linyi.posemon.camera
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageFormat
-import android.graphics.Matrix
-import android.graphics.Rect
+import android.graphics.*
 import android.hardware.camera2.CameraCaptureSession
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
@@ -43,11 +40,15 @@ import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
+var aa=Triple(PointF(3.3F, 6.5F),PointF(3.3F,6.5F), PointF(3.3F,6.5F))
 class CameraSource(
     private val surfaceView: SurfaceView,
     private val selectedCamera: Camera,
     private val listener: CameraSourceListener? = null
+
 ) {
+    val persons = mutableListOf<Person>()
+
 
     companion object {
         private const val PREVIEW_WIDTH = 640
@@ -55,7 +56,7 @@ class CameraSource(
 
         /** Threshold for confidence score. */
         /** 分数阈值，高于这个分数的人体结果才会被认为是有效的。 */
-        private const val MIN_CONFIDENCE = .3f
+         const val MIN_CONFIDENCE = .3f
 
         private const val TAG = "Camera Source"
     }
@@ -93,6 +94,7 @@ class CameraSource(
     /** [Handler] corresponding to [imageReaderThread] */
     private var imageReaderHandler: Handler? = null
     private var cameraId: String = ""
+
 
     suspend fun initCamera() {
         camera = openCamera(cameraManager, cameraId)
@@ -251,7 +253,7 @@ class CameraSource(
     }
 
     // process image
-    private fun processImage(bitmap: Bitmap) {
+     fun processImage(bitmap: Bitmap) {
         val persons = mutableListOf<Person>()
         var classificationResult: List<Pair<String, Float>>? = null
 
@@ -275,17 +277,21 @@ class CameraSource(
 
         // if the model returns only one item, show that item's score.
         if (persons.isNotEmpty()) {
-            listener?.onDetectedInfo(persons[0].score, classificationResult)
+            listener?.onDetectedInfo(persons[0].score)
         }
         visualize(persons, bitmap)
     }
 
-    private fun visualize(persons: List<Person>, bitmap: Bitmap) {
+     fun visualize(persons: List<Person>, bitmap: Bitmap) {
 
         val outputBitmap = VisualizationUtils.drawBodyKeypoints(
             bitmap,
             persons.filter { it.score > MIN_CONFIDENCE }, isTrackerEnabled
         )
+//         aa = VisualizationUtils.body(
+//            bitmap,
+//            persons.filter { it.score > MIN_CONFIDENCE }, isTrackerEnabled
+//        )
 
         val holder = surfaceView.holder
         val surfaceCanvas = holder.lockCanvas()
@@ -333,6 +339,8 @@ class CameraSource(
     interface CameraSourceListener {
         fun onFPSListener(fps: Int)
 
-        fun onDetectedInfo(personScore: Float?, poseLabels: List<Pair<String, Float>>?)
+//        fun onDetectedInfo(personScore: Float?, poseLabels: List<Pair<String, Float>>?)
+fun onDetectedInfo(personScore: Float?)
     }
+
 }

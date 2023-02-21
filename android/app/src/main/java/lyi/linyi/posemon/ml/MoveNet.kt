@@ -34,7 +34,8 @@ import kotlin.math.max
 import kotlin.math.min
 
 enum class ModelType {
-    Thunder
+    Thunder,
+    Lightning
 }
 
 class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: GpuDelegate?) :
@@ -53,6 +54,8 @@ class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: Gpu
          *  而 movenet_thunder_int8.tflite 还支持基于 NNAPI 在 AI 加速器（DSP） 上运行。
          * */
         private const val THUNDER_FILENAME = "movenet_thunder_int8.tflite"
+        private const val Lightning_FILENAME = "movenet_lightning_int8.tflite"
+
 
         // allow specifying model type.
         fun create(context: Context, device: Device, modelType: ModelType): MoveNet {
@@ -68,20 +71,35 @@ class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: Gpu
                 }
                 Device.NNAPI -> options.setUseNNAPI(true)
             }
-            return MoveNet(
-                Interpreter(
-                    FileUtil.loadMappedFile(
-                        context,
-                        THUNDER_FILENAME
-                    ), options
-                ),
-                gpuDelegate
-            )
+            when(modelType) {
+                ModelType.Thunder-> {
+                    return MoveNet(
+                        Interpreter(
+                            FileUtil.loadMappedFile(
+                                context,
+                                THUNDER_FILENAME
+                            ), options
+                        ),
+                        gpuDelegate
+                    )
+                }
+                ModelType.Lightning-> {
+                    return MoveNet(
+                        Interpreter(
+                            FileUtil.loadMappedFile(
+                                context,
+                                Lightning_FILENAME
+                            ), options
+                        ),
+                        gpuDelegate
+                    )
+                }
+            }
         }
 
         /** 默认使用 MoveNet Thunder */
         fun create(context: Context, device: Device): MoveNet =
-            create(context, device, ModelType.Thunder)
+            create(context, device, ModelType.Lightning)
     }
 
     private var cropRegion: RectF? = null
@@ -311,6 +329,45 @@ class MoveNet(private val interpreter: Interpreter, private var gpuDelegate: Gpu
      * used to determine the crop size. See determineRectF for more detail.
      */
     private fun determineTorsoAndBodyDistances(
+        keyPoints: List<KeyPoint>,
+        targetKeyPoints: List<KeyPoint>,
+        centerX: Float,
+        centerY: Float
+    ): TorsoAndBodyDistance {
+        val torsoJoints = listOf(
+            BodyPart.LEFT_SHOULDER.position,
+            BodyPart.RIGHT_SHOULDER.position,
+            BodyPart.LEFT_HIP.position,
+            BodyPart.RIGHT_HIP.position
+        )
+
+        var maxTorsoYRange = 0f
+        var maxTorsoXRange = 0f
+        torsoJoints.forEach { joint ->
+            val distY = abs(centerY - targetKeyPoints[joint].coordinate.y)
+            val distX = abs(centerX - targetKeyPoints[joint].coordinate.x)
+            if (distY > maxTorsoYRange) maxTorsoYRange = distY
+            if (distX > maxTorsoXRange) maxTorsoXRange = distX
+        }
+
+        var maxBodyYRange = 0f
+        var maxBodyXRange = 0f
+        for (joint in keyPoints.indices) {
+            if (keyPoints[joint].score < MIN_CROP_KEYPOINT_SCORE) continue
+            val distY = abs(centerY - keyPoints[joint].coordinate.y)
+            val distX = abs(centerX - keyPoints[joint].coordinate.x)
+
+            if (distY > maxBodyYRange) maxBodyYRange = distY
+            if (distX > maxBodyXRange) maxBodyXRange = distX
+        }
+        return TorsoAndBodyDistance(
+            maxTorsoYRange,
+            maxTorsoXRange,
+            maxBodyYRange,
+            maxBodyXRange
+        )
+    }
+     fun triangle(
         keyPoints: List<KeyPoint>,
         targetKeyPoints: List<KeyPoint>,
         centerX: Float,
